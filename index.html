@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>ピッチチャート</title>
+<style>
+:root {
+  --bg:#080f1c; --panel:#0f1b2d; --border:#1c3050;
+  --accent:#38bdf8; --orange:#fb923c; --green:#4ade80;
+  --red:#f87171; --purple:#c084fc; --yellow:#fbbf24;
+  --text:#ddeeff; --muted:#4a6a8a;
+  --sz:rgba(56,189,248,0.15); --szb:rgba(56,189,248,0.45);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'Hiragino Sans','Yu Gothic','Meiryo',sans-serif;background:var(--bg);color:var(--text);font-size:12px;}
+
+/* MEMBER MODAL */
+#memberModal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:9999;align-items:center;justify-content:center;padding:16px;}
+#memberModal.show{display:flex;}
+.mm-box{background:#0f1b2d;border:2px solid var(--accent);border-radius:16px;width:100%;max-width:780px;max-height:90vh;overflow-y:auto;}
+.mm-top{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:2px solid var(--accent);background:linear-gradient(135deg,#0d1b2e,#162840);border-radius:14px 14px 0 0;}
+.mm-top h2{font-size:18px;font-weight:700;color:var(--accent);}
+#btnSkip{padding:8px 18px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;cursor:pointer;font-family:inherit;}
+#btnSkip:hover{border-color:var(--accent);color:var(--accent);}
+.mm-body{padding:20px;}
+.mm-sec{font-size:10px;letter-spacing:2px;color:var(--muted);text-transform:uppercase;border-bottom:1px solid var(--border);padding-bottom:6px;margin:16px 0 10px;}
+.mm-sec:first-child{margin-top:0;}
+.mm-game{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.mi{background:rgba(255,255,255,0.07);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:8px;font-size:13px;font-family:inherit;width:100%;}
+.mi:focus{outline:none;border-color:var(--accent);}
+.brow{display:grid;grid-template-columns:36px 24px 1fr 88px;gap:6px;align-items:center;margin-bottom:6px;}
+.bnum{font-size:17px;font-weight:700;color:var(--accent);text-align:center;}
+.hs{background:rgba(255,255,255,0.07);border:1px solid var(--border);color:var(--text);padding:8px 6px;border-radius:8px;font-size:12px;font-family:inherit;width:100%;}
+.prow{display:grid;grid-template-columns:80px 1fr 88px 28px;gap:6px;align-items:center;margin-bottom:6px;}
+.mdel{background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;opacity:.5;}
+.mdel:hover{opacity:1;}
+#btnAddP{padding:8px 16px;background:rgba(56,189,248,0.1);border:1px dashed var(--accent);border-radius:8px;color:var(--accent);font-size:12px;cursor:pointer;font-family:inherit;margin-top:6px;}
+#btnStart{width:100%;padding:16px;margin-top:18px;background:linear-gradient(135deg,#38bdf8,#1a7ab0);border:none;border-radius:10px;color:#000;font-size:16px;font-weight:900;cursor:pointer;font-family:inherit;}
+#btnStart:hover{filter:brightness(1.1);}
+
+/* HEADER */
+.hdr{height:42px;background:linear-gradient(180deg,#0c1a2e,#111f35);border-bottom:2px solid var(--accent);display:flex;align-items:center;gap:8px;padding:0 10px;flex-shrink:0;}
+.logo{font-size:15px;font-weight:700;color:var(--accent);letter-spacing:2px;white-space:nowrap;}
+.hi{display:flex;gap:4px;flex:1;flex-wrap:wrap;}
+.hi input,.hi select{background:rgba(255,255,255,0.06);border:1px solid var(--border);color:var(--text);padding:3px 7px;border-radius:5px;font-size:11px;font-family:inherit;}
+.hi input{width:90px;} .hi select{width:70px;}
+.hi input:focus,.hi select:focus{outline:none;border-color:var(--accent);}
+.sb{display:flex;gap:2px;align-items:flex-end;}
+.sc{display:flex;flex-direction:column;align-items:center;}
+.sl{font-size:7px;color:var(--muted);}
+.sv{font-size:12px;font-weight:700;color:var(--accent);background:rgba(56,189,248,0.1);border:1px solid var(--border);border-radius:3px;width:22px;text-align:center;cursor:pointer;}
+
+/* LAYOUT */
+.root{display:grid;grid-template-columns:178px 1fr 238px;height:calc(100vh - 42px);}
+
+/* LEFT */
+.left{background:var(--panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.sec{font-size:9px;letter-spacing:2px;color:var(--muted);padding:5px 10px 4px;border-bottom:1px solid var(--border);text-transform:uppercase;}
+.abl{flex:1;overflow-y:auto;padding:4px;}
+.abc{padding:6px 8px;border-radius:6px;cursor:pointer;border:1px solid transparent;margin-bottom:3px;transition:all .15s;}
+.abc:hover{background:rgba(255,255,255,0.04);}
+.abc.act{background:rgba(56,189,248,0.1);border-color:rgba(56,189,248,0.35);}
+.abn{font-size:16px;font-weight:700;color:var(--accent);}
+.abname{font-size:11px;font-weight:700;}
+.abbd{font-size:9px;color:var(--muted);margin-top:2px;display:flex;gap:2px;flex-wrap:wrap;}
+.bdg{display:inline-block;padding:1px 4px;border-radius:3px;font-size:8px;font-weight:700;}
+.bS{background:var(--orange);color:#fff;} .bB{background:var(--accent);color:#000;}
+.bF{background:var(--purple);color:#fff;} .bH{background:var(--green);color:#000;}
+.bO{background:var(--red);color:#fff;} .bW{background:var(--yellow);color:#000;}
+.addab{margin:4px;padding:8px;background:rgba(56,189,248,0.1);border:1px dashed var(--accent);border-radius:6px;color:var(--accent);font-size:11px;cursor:pointer;text-align:center;font-family:inherit;}
+
+/* CENTER */
+.center{background:#111e30;display:flex;flex-direction:column;overflow-y:auto;}
+.abhdr{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid var(--border);background:rgba(0,0,0,0.2);flex-wrap:wrap;flex-shrink:0;}
+.abhdr input{background:rgba(255,255,255,0.07);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:6px;font-size:12px;font-family:inherit;width:95px;}
+.abhdr input:focus{outline:none;border-color:var(--accent);}
+.hbtn{padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:11px;cursor:pointer;font-family:inherit;font-weight:700;}
+.hbtn.on{background:var(--orange);border-color:var(--orange);color:#fff;}
+.cntw{display:flex;gap:8px;align-items:center;margin-left:auto;}
+.cntg{display:flex;align-items:center;gap:3px;}
+.cntl{font-size:10px;font-weight:700;color:var(--muted);}
+.cntd{display:flex;gap:3px;}
+.cdot{width:11px;height:11px;border-radius:50%;border:2px solid var(--muted);}
+.cdot.onB{background:var(--accent);border-color:var(--accent);} .cdot.onS{background:var(--orange);border-color:var(--orange);} .cdot.onO{background:var(--red);border-color:var(--red);}
+.bqw{display:flex;gap:3px;flex-wrap:wrap;align-items:center;}
+.obn{width:26px;height:26px;border-radius:50%;border:1.5px solid var(--border);background:rgba(255,255,255,0.05);color:var(--muted);font-size:10px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.obn:hover{border-color:var(--accent);color:var(--accent);}
+.obn.on{background:var(--accent);border-color:var(--accent);color:#000;}
+.pqs{background:rgba(255,255,255,0.06);border:1px solid var(--orange);color:var(--text);padding:4px 6px;border-radius:6px;font-size:11px;font-family:inherit;max-width:95px;}
+
+/* STEPS */
+.steps{display:flex;border-bottom:1px solid var(--border);flex-shrink:0;}
+.sp{flex:1;border-right:1px solid var(--border);padding:6px 8px;display:flex;flex-direction:column;gap:5px;}
+.sp:last-child{border-right:none;}
+.sphd{display:flex;align-items:center;gap:4px;font-size:9px;letter-spacing:1px;text-transform:uppercase;}
+.spb{width:16px;height:16px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;}
+.s1{background:var(--purple);color:#fff;} .s2{background:var(--orange);color:#fff;} .s3{background:var(--accent);color:#000;}
+.zw{display:flex;flex-direction:column;gap:2px;}
+.zlr{display:flex;justify-content:space-between;font-size:8px;color:var(--muted);}
+.zgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:3px;}
+.zc{aspect-ratio:1;border-radius:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;transition:all .12s;}
+.zc.sz{background:var(--sz);border:1px solid var(--szb);}
+.zc.bz{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);}
+.zc:hover{filter:brightness(1.6);transform:scale(1.07);}
+.zc.ss{background:rgba(192,132,252,0.5)!important;border-color:var(--purple)!important;box-shadow:0 0 8px rgba(192,132,252,0.5);}
+.zc.sp{background:rgba(251,146,60,0.5)!important;border-color:var(--orange)!important;box-shadow:0 0 8px rgba(251,146,60,0.5);}
+.zfoot{font-size:8px;color:var(--muted);text-align:center;}
+.ptg{display:grid;grid-template-columns:repeat(2,1fr);gap:4px;}
+.ptb{padding:7px 4px;border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,0.05);color:var(--text);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;text-align:center;}
+.ptb:hover{background:rgba(255,255,255,0.1);} .ptb.on{background:var(--orange);border-color:var(--orange);color:#fff;}
+.resrow{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:6px 10px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.rb{padding:9px 4px;border-radius:7px;border:1.5px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;text-align:center;}
+.rb:active{transform:scale(0.95);}
+.rS{border-color:var(--orange);color:var(--orange);} .rS.on{background:var(--orange);color:#fff;}
+.rB{border-color:var(--accent);color:var(--accent);} .rB.on{background:var(--accent);color:#000;}
+.rF{border-color:var(--purple);color:var(--purple);} .rF.on{background:var(--purple);color:#fff;}
+.rH{border-color:var(--green);color:var(--green);} .rH.on{background:var(--green);color:#000;}
+.rO{border-color:var(--red);color:var(--red);} .rO.on{background:var(--red);color:#fff;}
+.rW{border-color:var(--yellow);color:var(--yellow);} .rW.on{background:var(--yellow);color:#000;}
+.batp{display:none;padding:6px 10px;border-bottom:1px solid var(--border);background:rgba(74,222,128,0.05);flex-shrink:0;}
+.batp.open{display:block;}
+.batrow{display:flex;gap:8px;align-items:flex-start;}
+.btcol{display:flex;flex-direction:column;gap:4px;justify-content:center;}
+.bttb{padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:rgba(255,255,255,0.04);color:var(--text);font-size:11px;font-weight:700;cursor:pointer;font-family:inherit;}
+.bttb.on{background:var(--green);border-color:var(--green);color:#000;}
+.recbtn{margin:5px 10px 4px;padding:9px;background:linear-gradient(135deg,rgba(56,189,248,.22),rgba(56,189,248,.1));border:2px solid var(--accent);border-radius:8px;color:var(--accent);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.recbtn:hover{background:rgba(56,189,248,.3);}
+.plog{flex:0 0 auto;max-height:190px;overflow-y:auto;padding:5px 10px;}
+.logt{font-size:9px;letter-spacing:2px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;}
+.ltbl{width:100%;border-collapse:collapse;font-size:10px;}
+.ltbl th{text-align:left;padding:3px 5px;color:var(--muted);font-size:9px;border-bottom:1px solid var(--border);}
+.ltbl td{padding:4px 5px;border-bottom:1px solid rgba(255,255,255,0.04);}
+.mok{color:var(--green);font-weight:700;} .mng{color:var(--red);font-weight:700;}
+.delbtn{background:none;border:none;color:var(--red);cursor:pointer;font-size:11px;opacity:.4;}
+.delbtn:hover{opacity:1;}
+
+/* RIGHT */
+.right{background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+.tabs{display:flex;border-bottom:1px solid var(--border);}
+.tab{flex:1;padding:6px 2px;text-align:center;font-size:9px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;}
+.tab:hover{color:var(--text);} .tab.on{color:var(--accent);border-bottom-color:var(--accent);}
+.tb{flex:1;overflow-y:auto;padding:8px;}
+.tp{display:none;} .tp.on{display:block;}
+.card{background:rgba(255,255,255,0.03);border:1px solid var(--border);border-radius:8px;padding:8px;margin-bottom:8px;}
+.ctt{font-size:9px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;}
+.sr{display:flex;justify-content:space-between;align-items:center;padding:2px 0;font-size:11px;}
+.svv{font-size:15px;font-weight:700;color:var(--accent);}
+.svv.g{color:var(--green);} .svv.r{color:var(--red);} .svv.y{color:var(--yellow);}
+.bigpct{text-align:center;padding:6px 0;}
+.bignum{font-size:34px;font-weight:700;line-height:1;}
+.bigsub{font-size:10px;color:var(--muted);margin-top:3px;}
+.br{display:flex;align-items:center;gap:5px;margin-bottom:4px;}
+.bl{font-size:10px;width:52px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bb{flex:1;height:6px;background:rgba(255,255,255,0.07);border-radius:3px;overflow:hidden;}
+.bf{height:100%;border-radius:3px;transition:width .4s;}
+.bc{font-size:9px;color:var(--muted);width:24px;text-align:right;}
+.hmap{display:grid;grid-template-columns:repeat(5,1fr);gap:2px;margin-top:4px;}
+.hcell{aspect-ratio:1;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;}
+.expbtn{margin:6px;padding:10px;background:rgba(74,222,128,0.1);border:1px solid var(--green);border-radius:8px;color:var(--green);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;text-align:center;}
+.rptbtn{margin:0 6px 6px;padding:10px;background:rgba(192,132,252,0.1);border:1px solid var(--purple);border-radius:8px;color:var(--purple);font-size:12px;font-weight:700;cursor:pointer;font-family:inherit;text-align:center;}
+
+::-webkit-scrollbar{width:4px;} ::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(60px);background:var(--accent);color:#000;font-weight:700;padding:10px 22px;border-radius:8px;font-size:13px;transition:transform .3s;z-index:9998;pointer-events:none;}
+.toast.show{transform:translateX(-50%) translateY(0);}
+@media print{.root,.hdr{display:none!important;} #rptModal{position:static!important;background:#fff!important;padding:0!important;}}
+</style>
+</head>
+<body>
+
+<!-- MEMBER MODAL -->
+<div id="memberModal">
+  <div class="mm-box">
+    <div class="mm-top">
+      <h2>⚾ スターティングメンバー登録</h2>
+      <button id="btnSkip">スキップ</button>
+    </div>
+    <div class="mm-body">
+      <div class="mm-sec">ゲーム情報</div>
+      <div class="mm-game">
+        <input class="mi" id="m_teamA" placeholder="先攻チーム名">
+        <input class="mi" id="m_teamB" placeholder="後攻チーム名">
+        <input class="mi" type="date" id="m_date">
+      </div>
+      <div class="mm-sec">打者（スターティングオーダー）</div>
+      <div id="batterRows"></div>
+      <div class="mm-sec">投手陣</div>
+      <div id="pitcherRows"></div>
+      <button id="btnAddP">＋ 投手を追加</button>
+      <button id="btnStart">✚ 試合を開始する</button>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div class="hdr">
+  <div class="logo">⚾ PITCH</div>
+  <div class="hi">
+    <input id="teamA" placeholder="先攻">
+    <input id="teamB" placeholder="後攻">
+    <input type="date" id="gameDate">
+    <input id="pitcherName" placeholder="投手名">
+    <select id="pitcherHand"><option value="R">右投</option><option value="L">左投</option></select>
+    <input id="catcherName" placeholder="捕手名" style="width:76px;">
+  </div>
+  <div class="sb" id="sb"></div>
+  <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+    <span id="saveInd" style="font-size:10px;color:var(--green);opacity:.5;white-space:nowrap;">💾 保存済</span>
+    <button id="btnReset" style="padding:4px 8px;background:rgba(248,113,113,0.1);border:1px solid var(--red);border-radius:5px;color:var(--red);font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">🗑 リセット</button>
+  </div>
+</div>
+
+<!-- ROOT -->
+<div class="root">
+  <div class="left">
+    <div class="sec">打席一覧</div>
+    <div class="abl" id="abList"></div>
+    <button class="addab" id="btnAddAB">＋ 新しい打席</button>
+  </div>
+
+  <div class="center">
+    <div class="abhdr">
+      <span style="font-size:16px;font-weight:700;color:var(--accent)">第<span id="abNum">1</span>打席</span>
+      <input id="batterName" placeholder="打者名">
+      <div class="bqw" id="bOrderBtns"></div>
+      <select id="bQuickSel" class="pqs" style="display:none;"><option value="">選択</option></select>
+      <input id="catcherAB" placeholder="捕手名" style="width:76px;">
+      <select id="pQuickSel" class="pqs"><option value="">投手選択</option></select>
+      <input id="pitcherAB" placeholder="投手名" style="width:76px;border-color:var(--orange)!important;">
+      <div style="display:flex;gap:3px;">
+        <button class="hbtn on" id="hR">右打</button>
+        <button class="hbtn" id="hL">左打</button>
+      </div>
+      <div class="cntw">
+        <div class="cntg"><span class="cntl">B</span><div class="cntd" id="bDots"></div></div>
+        <div class="cntg"><span class="cntl">S</span><div class="cntd" id="sDots"></div></div>
+        <div class="cntg"><span class="cntl">O</span><div class="cntd" id="oDots"></div></div>
+      </div>
+    </div>
+
+    <div class="steps">
+      <div class="sp">
+        <div class="sphd"><div class="spb s1">1</div><span style="color:var(--purple)">捕手の構え</span></div>
+        <div class="zw"><div class="zlr"><span>外角</span><span>内角</span></div><div class="zgrid" id="setupGrid"></div><div class="zfoot">▲ バックネット裏・捕手視点</div></div>
+      </div>
+      <div class="sp">
+        <div class="sphd"><div class="spb s2">2</div><span style="color:var(--orange)">球種</span></div>
+        <div class="ptg" id="ptGrid"></div>
+      </div>
+      <div class="sp">
+        <div class="sphd"><div class="spb s3">3</div><span style="color:var(--accent)">実際のコース</span></div>
+        <div class="zw"><div class="zlr"><span>外角</span><span>内角</span></div><div class="zgrid" id="pitchGrid"></div><div class="zfoot">▲ 実際に来たコース</div></div>
+      </div>
+    </div>
+
+    <div class="resrow">
+      <button class="rb rS" id="rS">ストライク</button>
+      <button class="rb rB" id="rB">ボール</button>
+      <button class="rb rF" id="rF">ファウル</button>
+      <button class="rb rH" id="rH">安打</button>
+      <button class="rb rO" id="rO">アウト</button>
+      <button class="rb rW" id="rW">四球/死球</button>
+    </div>
+
+    <div class="batp" id="batp">
+      <div style="font-size:9px;color:var(--green);text-transform:uppercase;margin-bottom:5px;">④ 打球方向・種別（任意）</div>
+      <div class="batrow">
+        <svg width="120" height="110" viewBox="0 0 180 160">
+          <path d="M90,148 L8,20 L90,8 L172,20 Z" fill="rgba(74,222,128,0.06)" stroke="rgba(74,222,128,0.2)" stroke-width="1.5"/>
+          <polygon points="90,140 52,112 90,84 128,112" fill="rgba(251,191,36,0.1)" stroke="rgba(251,191,36,0.35)" stroke-width="1.2"/>
+          <polygon points="90,148 84,142 90,136 96,142" fill="var(--yellow)" opacity="0.85"/>
+          <path fill="transparent" style="cursor:pointer" onclick="selDir('左翼')" d="M90,148 L8,20 L50,20 L90,84 Z"/>
+          <path fill="transparent" style="cursor:pointer" onclick="selDir('左中')" d="M90,84 L50,20 L90,8 Z"/>
+          <path fill="transparent" style="cursor:pointer" onclick="selDir('中堅')" d="M90,84 L90,8 L130,20 Z"/>
+          <path fill="transparent" style="cursor:pointer" onclick="selDir('右中')" d="M90,84 L130,20 L172,20 Z"/>
+          <path fill="transparent" style="cursor:pointer" onclick="selDir('右翼')" d="M90,148 L128,112 L90,84 L172,20 Z"/>
+          <path fill="transparent" style="cursor:pointer" onclick="selDir('三塁側')" d="M90,148 L52,112 L8,20 Z"/>
+          <path fill="transparent" style="cursor:pointer" onclick="selDir('投手前')" d="M90,140 L52,112 L90,84 L128,112 Z"/>
+          <path fill="transparent" style="cursor:pointer" onclick="selDir('一塁側')" d="M90,148 L128,112 L172,20 Z"/>
+          <text x="28" y="70" text-anchor="middle" font-size="9" fill="rgba(74,222,128,0.6)">左翼</text>
+          <text x="60" y="30" text-anchor="middle" font-size="9" fill="rgba(74,222,128,0.6)">左中</text>
+          <text x="90" y="18" text-anchor="middle" font-size="9" fill="rgba(74,222,128,0.6)">中堅</text>
+          <text x="120" y="30" text-anchor="middle" font-size="9" fill="rgba(74,222,128,0.6)">右中</text>
+          <text x="152" y="70" text-anchor="middle" font-size="9" fill="rgba(74,222,128,0.6)">右翼</text>
+          <text x="22" y="130" text-anchor="middle" font-size="9" fill="rgba(251,191,36,0.6)">三塁</text>
+          <text x="90" y="120" text-anchor="middle" font-size="9" fill="rgba(251,191,36,0.6)">投前</text>
+          <text x="158" y="130" text-anchor="middle" font-size="9" fill="rgba(251,191,36,0.6)">一塁</text>
+          <circle id="fmk" cx="-99" cy="-99" r="10" fill="none" stroke="var(--green)" stroke-width="2.5" pointer-events="none"/>
+          <text id="fdlbl" x="90" y="156" text-anchor="middle" font-size="11" fill="var(--green)" font-weight="700"></text>
+        </svg>
+        <div class="btcol">
+          <div style="font-size:9px;color:var(--muted);margin-bottom:2px;">打球種別</div>
+          <button class="bttb" id="bt0">🟡 ゴロ</button>
+          <button class="bttb" id="bt1">🔵 フライ</button>
+          <button class="bttb" id="bt2">🟢 ライナー</button>
+          <button class="bttb" id="bt3">⚪ バント</button>
+        </div>
+      </div>
+    </div>
+
+    <button class="recbtn" id="btnRecord">✚ この投球を記録</button>
+
+    <div class="plog">
+      <div class="logt">投球ログ（現打席）</div>
+      <table class="ltbl">
+        <thead><tr><th>#</th><th>カウント</th><th>球種</th><th>構え</th><th>実際</th><th>一致</th><th>結果</th><th></th></tr></thead>
+        <tbody id="pitchLog"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="tabs">
+      <div class="tab on" id="tab-sum">サマリー</div>
+      <div class="tab" id="tab-pitcher">投手別</div>
+      <div class="tab" id="tab-setup">構え</div>
+      <div class="tab" id="tab-zone">コース</div>
+      <div class="tab" id="tab-bat">打球</div>
+    </div>
+    <div class="tb">
+      <div class="tp on" id="tp-sum">
+        <div class="card">
+          <div class="ctt">投球サマリー</div>
+          <div class="sr"><span>総投球数</span><span class="svv" id="sTotal">0</span></div>
+          <div class="sr"><span>ストライク率</span><span class="svv g" id="sStR">-</span></div>
+          <div class="sr"><span>1打席平均</span><span class="svv" id="sAvg">-</span></div>
+        </div>
+        <div class="card">
+          <div class="ctt">構え一致率</div>
+          <div class="bigpct"><div class="bignum" id="mPct" style="color:var(--green)">-</div><div class="bigsub">構え通りに投げた割合</div></div>
+          <div class="sr"><span>✔ 一致</span><span class="svv g" id="mCnt">0</span></div>
+          <div class="sr"><span>✘ ズレ</span><span class="svv r" id="mMiss">0</span></div>
+        </div>
+        <div class="card">
+          <div class="ctt">打席結果</div>
+          <div class="sr"><span>安打</span><span class="svv r" id="sHits">0</span></div>
+          <div class="sr"><span>アウト</span><span class="svv g" id="sOuts">0</span></div>
+          <div class="sr"><span>四死球</span><span class="svv y" id="sWalks">0</span></div>
+        </div>
+      </div>
+      <div class="tp" id="tp-pitcher">
+        <div class="card"><div class="ctt">登板投手</div><div id="pStat"><span style="font-size:11px;color:var(--muted)">投手名を入力してください</span></div></div>
+      </div>
+      <div class="tp" id="tp-setup">
+        <div class="card">
+          <div class="ctt">構えコース別・球種内訳</div>
+          <div style="font-size:8px;color:var(--muted);display:flex;justify-content:space-between;margin-bottom:3px;"><span>外角</span><span>内角</span></div>
+          <div class="hmap" id="setupSelGrid"></div>
+          <div style="font-size:10px;color:var(--muted);margin-top:6px;margin-bottom:4px;" id="setupZoneName">▲ コースをタップ</div>
+          <div id="setupTypeDist"></div>
+        </div>
+        <div class="card"><div class="ctt">構え回数ヒートマップ</div><div class="hmap" id="setupHmap"></div></div>
+      </div>
+      <div class="tp" id="tp-zone">
+        <div class="card"><div class="ctt">投球コース分布</div><div class="hmap" id="pitchHmap"></div></div>
+        <div class="card"><div class="ctt">ズレ着地コース</div><div class="hmap" id="missHmap"></div></div>
+        <div class="card"><div class="ctt">球種分布</div><div id="typeDist"></div></div>
+      </div>
+      <div class="tp" id="tp-bat">
+        <div class="card">
+          <div class="ctt">打球方向マップ</div>
+          <div style="font-size:10px;color:var(--muted);margin-bottom:6px;" id="batLabel">全打者</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px;" id="batFilters"></div>
+          <svg width="150" height="138" viewBox="0 0 180 160">
+            <path d="M90,148 L8,20 L90,8 L172,20 Z" fill="rgba(74,222,128,0.05)" stroke="rgba(74,222,128,0.15)" stroke-width="1.2"/>
+            <polygon points="90,140 52,112 90,84 128,112" fill="rgba(251,191,36,0.08)" stroke="rgba(251,191,36,0.3)" stroke-width="1"/>
+            <polygon points="90,148 84,142 90,136 96,142" fill="var(--yellow)" opacity="0.7"/>
+            <text id="fs-左翼"  x="30"  y="72"  text-anchor="middle" font-size="12" fill="var(--green)" font-weight="700"></text>
+            <text id="fs-左中"  x="60"  y="34"  text-anchor="middle" font-size="12" fill="var(--green)" font-weight="700"></text>
+            <text id="fs-中堅"  x="90"  y="22"  text-anchor="middle" font-size="12" fill="var(--green)" font-weight="700"></text>
+            <text id="fs-右中"  x="120" y="34"  text-anchor="middle" font-size="12" fill="var(--green)" font-weight="700"></text>
+            <text id="fs-右翼"  x="150" y="72"  text-anchor="middle" font-size="12" fill="var(--green)" font-weight="700"></text>
+            <text id="fs-三塁側" x="26" y="130" text-anchor="middle" font-size="11" fill="var(--yellow)" font-weight="700"></text>
+            <text id="fs-投手前" x="90" y="120" text-anchor="middle" font-size="11" fill="var(--yellow)" font-weight="700"></text>
+            <text id="fs-一塁側" x="154" y="130" text-anchor="middle" font-size="11" fill="var(--yellow)" font-weight="700"></text>
+          </svg>
+        </div>
+        <div class="card"><div class="ctt">打者別打球傾向</div><div id="batDetail"></div></div>
+      </div>
+    </div>
+    <button class="expbtn" id="btnCSV">📊 CSVエクスポート</button>
+    <button class="rptbtn" id="btnRpt">📋 ミーティングレポート</button>
+  </div>
+</div>
+
+<!-- REPORT MODAL -->
+<div id="rptModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:1000;overflow-y:auto;padding:20px;">
+  <div id="rptInner" style="max-width:860px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;"></div>
+  <div style="text-align:center;margin-top:16px;display:flex;gap:10px;justify-content:center;">
+    <button onclick="window.print()" style="padding:12px 28px;background:var(--purple);border:none;border-radius:8px;color:#fff;font-size:15px;font-weight:700;cursor:pointer;">🖨 印刷/PDF保存</button>
+    <button onclick="document.getElementById('rptModal').style.display='none'" style="padding:12px 28px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.3);border-radius:8px;color:#fff;font-size:15px;cursor:pointer;">✕ 閉じる</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== CONSTANTS =====
+var R=5,C=5;
+var TYPES=['直球','スライダー','カーブ','チェンジアップ','フォーク','カットボール','シュート','ツーシーム','シンカー','スプリット'];
+var TCOLS=['#fb923c','#38bdf8','#4ade80','#c084fc','#fbbf24','#f472b6','#34d399','#60a5fa','#a78bfa','#86efac'];
+var RL={S:'ストライク',B:'ボール',F:'ファウル',H:'安打',O:'アウト',W:'四球/死球'};
+var DIRS=['左翼','左中','中堅','右中','右翼','三塁側','投手前','一塁側'];
+var BTYPES=['ゴロ','フライ','ライナー','バント'];
+var ZN=[['高外遠','高外','高め','高内','高内遠'],['外高','外高中','高中','内高中','内高'],['外','外中','真中','内中','内'],['外低中','外低中','低中','内低中','内低'],['低外遠','低外','低め','低内','低内遠']];
+var FCOORDS={'左翼':[28,72],'左中':[60,34],'中堅':[90,22],'右中':[120,34],'右翼':[152,72],'三塁側':[26,128],'投手前':[90,112],'一塁側':[154,128]};
+var SAVE='pitchChartV5';
+function isSZ(r,c){return r>=1&&r<=3&&c>=1&&c<=3;}
+
+// ===== STATE =====
+var ST={abs:[],cur:0,balls:0,strikes:0,outs:0};
+var SEL={setup:null,type:null,pitch:null,result:null,dir:null,btype:null};
+var M={batters:Array(9).fill(null).map(function(_,i){return{order:i+1,name:'',hand:'R'};}),pitchers:[{role:'先発',name:'',hand:'R'}]};
+var selBatter='全打者',selSetupZone=null;
+
+// ===== INIT =====
+window.onload = function() {
+  buildSB();
+  buildGrid('setupGrid','s');
+  buildGrid('pitchGrid','p');
+  buildPtBtns();
+  buildHmaps();
+  setupEvents();
+  buildMemberModal();
+  var ok = loadData();
+  if(ok && ST.abs.length>0){
+    renderABList();renderCurAB();updateDots();updateStats();
+    toast('前回の記録を復元しました');
+  } else {
+    addAB();
+    document.getElementById('memberModal').classList.add('show');
+  }
+};
+
+function setupEvents(){
+  document.getElementById('btnSkip').onclick=function(){document.getElementById('memberModal').classList.remove('show');renderBUI();renderPUI();};
+  document.getElementById('btnStart').onclick=startGame;
+  document.getElementById('btnAddP').onclick=function(){M.pitchers.push({role:'中継ぎ',name:'',hand:'R'});buildPitcherRows();};
+  document.getElementById('btnAddAB').onclick=addAB;
+  document.getElementById('btnRecord').onclick=recordPitch;
+  document.getElementById('btnReset').onclick=doReset;
+  document.getElementById('btnCSV').onclick=exportCSV;
+  document.getElementById('btnRpt').onclick=openReport;
+  document.getElementById('batterName').oninput=function(){var ab=ST.abs[ST.cur];if(ab){ab.batter=this.value;renderABList();saveData();}};
+  document.getElementById('catcherAB').oninput=function(){var ab=ST.abs[ST.cur];if(ab){ab.catcher=this.value;renderABList();saveData();}};
+  document.getElementById('pitcherAB').oninput=function(){var ab=ST.abs[ST.cur];if(ab){ab.pitcher=this.value;renderABList();saveData();}};
+  document.getElementById('hR').onclick=function(){setHand('R');};
+  document.getElementById('hL').onclick=function(){setHand('L');};
+  document.getElementById('bQuickSel').onchange=function(){selBFromList(this.value);};
+  document.getElementById('pQuickSel').onchange=function(){selPFromList(this.value);};
+  ['rS','rB','rF','rH','rO','rW'].forEach(function(id){
+    document.getElementById(id).onclick=function(){selRes(id.slice(1));};
+  });
+  ['bt0','bt1','bt2','bt3'].forEach(function(id,i){
+    document.getElementById(id).onclick=function(){selBType(BTYPES[i],this);};
+  });
+  ['tab-sum','tab-pitcher','tab-setup','tab-zone','tab-bat'].forEach(function(id){
+    document.getElementById(id).onclick=function(){switchTab(id);};
+  });
+}
+
+// ===== SCOREBOARD =====
+function buildSB(){
+  var sb=document.getElementById('sb');
+  for(var i=1;i<=9;i++){
+    var d=document.createElement('div');d.className='sc';
+    d.innerHTML='<span class="sl">'+i+'</span><div class="sv" id="inn'+i+'" onclick="setInn('+i+')">-</div>';
+    sb.appendChild(d);
+  }
+  var t=document.createElement('div');t.className='sc';
+  t.innerHTML='<span class="sl">計</span><div class="sv" id="innT" style="color:var(--yellow)">0</div>';
+  sb.appendChild(t);
+}
+function setInn(n){var v=prompt(n+'回の得点:');if(v!==null&&!isNaN(v)){document.getElementById('inn'+n).textContent=v;recalcSB();saveData();}}
+function recalcSB(){var t=0;for(var i=1;i<=9;i++){var el=document.getElementById('inn'+i);if(el){var v=parseInt(el.textContent);if(!isNaN(v))t+=v;}}document.getElementById('innT').textContent=t;}
+
+// ===== GRIDS =====
+function buildGrid(id,mode){
+  var g=document.getElementById(id);g.innerHTML='';
+  for(var r=0;r<R;r++)for(var c=0;c<C;c++){
+    var el=document.createElement('div');
+    el.className='zc '+(isSZ(r,c)?'sz':'bz');
+    el.title=ZN[r][c];
+    (function(rr,cc,elem){elem.onclick=function(){selZone(mode,rr,cc,elem);};})(r,c,el);
+    g.appendChild(el);
+  }
+}
+function buildPtBtns(){
+  var g=document.getElementById('ptGrid');g.innerHTML='';
+  TYPES.forEach(function(t){
+    var b=document.createElement('button');b.className='ptb';b.textContent=t;
+    b.onclick=function(){SEL.type=t;document.querySelectorAll('.ptb').forEach(function(x){x.classList.remove('on');});b.classList.add('on');};
+    g.appendChild(b);
+  });
+}
+function buildHmaps(){
+  ['setupHmap','pitchHmap','missHmap'].forEach(function(id){
+    var g=document.getElementById(id);if(!g)return;g.innerHTML='';
+    for(var r=0;r<R;r++)for(var c=0;c<C;c++){
+      var d=document.createElement('div');d.className='hcell';d.id=id+'-'+r+'-'+c;d.title=ZN[r][c];
+      d.style.background=isSZ(r,c)?'rgba(56,189,248,0.07)':'rgba(255,255,255,0.03)';
+      d.style.border='1px solid '+(isSZ(r,c)?'rgba(56,189,248,0.2)':'rgba(255,255,255,0.07)');
+      g.appendChild(d);
+    }
+  });
+  var sg=document.getElementById('setupSelGrid');if(!sg)return;sg.innerHTML='';
+  for(var r=0;r<R;r++)for(var c=0;c<C;c++){
+    var d=document.createElement('div');d.className='hcell';d.id='ssel-'+r+'-'+c;d.title=ZN[r][c];d.style.cursor='pointer';
+    d.style.background=isSZ(r,c)?'rgba(56,189,248,0.07)':'rgba(255,255,255,0.03)';
+    d.style.border='1px solid '+(isSZ(r,c)?'rgba(56,189,248,0.2)':'rgba(255,255,255,0.07)');
+    (function(rr,cc){d.onclick=function(){showSetupZone(rr,cc);};})(r,c);
+    sg.appendChild(d);
+  }
+}
+
+// ===== MEMBER MODAL =====
+function buildMemberModal(){buildBatterRows();buildPitcherRows();}
+function buildBatterRows(){
+  var el=document.getElementById('batterRows');el.innerHTML='';
+  M.batters.forEach(function(b,i){
+    var row=document.createElement('div');row.className='brow';
+    row.innerHTML='<div class="bnum">'+(i+1)+'</div><div style="font-size:10px;color:var(--muted)">番</div>'+
+      '<input class="mi" placeholder="選手名" value="'+b.name+'" oninput="M.batters['+i+'].name=this.value">'+
+      '<select class="hs" onchange="M.batters['+i+'].hand=this.value"><option value="R"'+(b.hand==='R'?' selected':'')+'>右打</option><option value="L"'+(b.hand==='L'?' selected':'')+'>左打</option><option value="S"'+(b.hand==='S'?' selected':'')+'>両打</option></select>';
+    el.appendChild(row);
+  });
+}
+function buildPitcherRows(){
+  var el=document.getElementById('pitcherRows');el.innerHTML='';
+  M.pitchers.forEach(function(p,i){
+    var row=document.createElement('div');row.className='prow';
+    row.innerHTML='<select class="hs" style="font-size:10px;" onchange="M.pitchers['+i+'].role=this.value"><option value="先発"'+(p.role==='先発'?' selected':'')+'>先発</option><option value="中継ぎ"'+(p.role==='中継ぎ'?' selected':'')+'>中継ぎ</option><option value="抑え"'+(p.role==='抑え'?' selected':'')+'>抑え</option></select>'+
+      '<input class="mi" placeholder="投手名" value="'+p.name+'" oninput="M.pitchers['+i+'].name=this.value">'+
+      '<select class="hs" onchange="M.pitchers['+i+'].hand=this.value"><option value="R"'+(p.hand==='R'?' selected':'')+'>右投</option><option value="L"'+(p.hand==='L'?' selected':'')+'>左投</option></select>'+
+      '<button class="mdel" onclick="M.pitchers.splice('+i+',1);buildPitcherRows();"'+(M.pitchers.length<=1?' disabled style="opacity:.2"':'')+'>✕</button>';
+    el.appendChild(row);
+  });
+}
+function startGame(){
+  var ta=document.getElementById('m_teamA').value;
+  var tb=document.getElementById('m_teamB').value;
+  var gd=document.getElementById('m_date').value;
+  if(ta)document.getElementById('teamA').value=ta;
+  if(tb)document.getElementById('teamB').value=tb;
+  if(gd)document.getElementById('gameDate').value=gd;
+  var starter=M.pitchers.find(function(p){return p.role==='先発'&&p.name;});
+  if(starter){
+    document.getElementById('pitcherName').value=starter.name;
+    document.getElementById('pitcherAB').value=starter.name;
+    var ab=ST.abs[ST.cur];if(ab)ab.pitcher=starter.name;
+  }
+  document.getElementById('memberModal').classList.remove('show');
+  renderBUI();renderPUI();saveData();
+  toast('メンバー登録完了！試合を開始します');
+}
+function renderBUI(){
+  var wrap=document.getElementById('bOrderBtns');
+  var sel=document.getElementById('bQuickSel');
+  wrap.innerHTML='';sel.innerHTML='<option value="">選択</option>';
+  var has=M.batters.some(function(b){return b.name;});
+  if(!has){sel.style.display='none';return;}
+  M.batters.forEach(function(b,i){
+    if(!b.name)return;
+    var btn=document.createElement('button');btn.className='obn';btn.textContent=i+1;btn.title=(i+1)+'番 '+b.name;
+    (function(ii){btn.onclick=function(){selBO(ii);};})(i);
+    wrap.appendChild(btn);
+    var opt=document.createElement('option');opt.value=i;opt.textContent=(i+1)+'番 '+b.name;sel.appendChild(opt);
+  });
+  var ph=document.createElement('option');ph.value='ph';ph.textContent='代打（手入力）';sel.appendChild(ph);
+  sel.style.display='inline-block';
+}
+function renderPUI(){
+  var sel=document.getElementById('pQuickSel');sel.innerHTML='<option value="">投手選択</option>';
+  M.pitchers.forEach(function(p,i){
+    if(!p.name)return;
+    var opt=document.createElement('option');opt.value=i;opt.textContent=p.role+' '+p.name;sel.appendChild(opt);
+  });
+}
+function selBO(idx){
+  var b=M.batters[idx];if(!b||!b.name)return;
+  var ab=ST.abs[ST.cur];if(!ab)return;
+  ab.batter=b.name;ab.hand=b.hand==='S'?'R':b.hand;
+  document.getElementById('batterName').value=b.name;
+  document.getElementById('hR').classList.toggle('on',ab.hand==='R');
+  document.getElementById('hL').classList.toggle('on',ab.hand==='L');
+  document.getElementById('bQuickSel').value=idx;
+  document.querySelectorAll('.obn').forEach(function(btn,i){btn.classList.toggle('on',i===idx);});
+  renderABList();saveData();
+}
+function selBFromList(val){if(val==='ph'||val===''){document.getElementById('batterName').value='';document.getElementById('batterName').focus();document.querySelectorAll('.obn').forEach(function(b){b.classList.remove('on');});return;}selBO(parseInt(val));}
+function selPFromList(val){if(val==='')return;var p=M.pitchers[parseInt(val)];if(!p)return;document.getElementById('pitcherAB').value=p.name;var ab=ST.abs[ST.cur];if(ab){ab.pitcher=p.name;renderABList();saveData();}}
+
+// ===== AT BAT =====
+function addAB(){
+  var prev=ST.abs.length>0?(ST.abs[ST.abs.length-1].pitcher||''):'';
+  ST.abs.push({id:Date.now(),num:ST.abs.length+1,batter:'',hand:'R',catcher:'',pitcher:prev,pitches:[],finalResult:null});
+  ST.cur=ST.abs.length-1;resetCount();renderABList();renderCurAB();
+  document.querySelectorAll('.obn').forEach(function(b){b.classList.remove('on');});
+  var qs=document.getElementById('bQuickSel');if(qs)qs.value='';
+  if(ST.abs.length>1)saveData();
+}
+function selAB(idx){ST.cur=idx;recalcCount();renderABList();renderCurAB();}
+function resetCount(){ST.balls=0;ST.strikes=0;updateDots();}
+function recalcCount(){
+  ST.balls=0;ST.strikes=0;
+  var ab=ST.abs[ST.cur];if(!ab)return;
+  ab.pitches.forEach(function(p){
+    if(p.result==='B'){if(ST.balls<3)ST.balls++;else{ST.balls=0;ST.strikes=0;}}
+    else if(p.result==='S'){if(ST.strikes<2)ST.strikes++;else{ST.balls=0;ST.strikes=0;}}
+    else if(p.result==='F'&&ST.strikes<2)ST.strikes++;
+  });updateDots();
+}
+function setHand(h){var ab=ST.abs[ST.cur];if(!ab)return;ab.hand=h;document.getElementById('hR').classList.toggle('on',h==='R');document.getElementById('hL').classList.toggle('on',h==='L');saveData();}
+function renderABList(){
+  var el=document.getElementById('abList');el.innerHTML='';
+  ST.abs.forEach(function(ab,i){
+    var d=document.createElement('div');d.className='abc'+(i===ST.cur?' act':'');
+    (function(ii){d.onclick=function(){selAB(ii);};})(i);
+    var bdg=ab.pitches.map(function(p){return '<span class="bdg b'+p.result+'">'+p.result+'</span>';}).join('');
+    d.innerHTML='<div style="display:flex;align-items:center;gap:6px;"><div class="abn">'+ab.num+'</div><div><div class="abname">'+(ab.batter||'（未入力）')+(ab.pitcher?' <span style="font-size:9px;color:var(--orange);">⚾'+ab.pitcher+'</span>':'')+(ab.catcher?' <span style="font-size:9px;color:var(--accent);">🧤'+ab.catcher+'</span>':'')+'</div><div class="abbd">'+(bdg||'<span style="color:var(--muted)">投球なし</span>')+'</div></div><div style="margin-left:auto;font-size:10px;color:var(--muted);">'+ab.pitches.length+'球</div></div>';
+    el.appendChild(d);
+  });
+}
+function renderCurAB(){
+  var ab=ST.abs[ST.cur];if(!ab)return;
+  document.getElementById('abNum').textContent=ab.num;
+  document.getElementById('batterName').value=ab.batter;
+  document.getElementById('catcherAB').value=ab.catcher||'';
+  document.getElementById('pitcherAB').value=ab.pitcher||'';
+  document.getElementById('hR').classList.toggle('on',ab.hand==='R');
+  document.getElementById('hL').classList.toggle('on',ab.hand==='L');
+  renderLog();
+}
+
+// ===== SELECTION =====
+function selZone(mode,r,c,el){
+  var key=mode==='s'?'setup':'pitch';
+  SEL[key]={r:r,c:c,label:ZN[r][c],sz:isSZ(r,c)};
+  var gid=mode==='s'?'setupGrid':'pitchGrid';
+  var cls=mode==='s'?'ss':'sp';
+  document.querySelectorAll('#'+gid+' .zc').forEach(function(x){x.classList.remove(cls);});
+  el.classList.add(cls);
+}
+function selRes(r){
+  SEL.result=r;
+  document.querySelectorAll('.rb').forEach(function(b){b.classList.remove('on');});
+  document.querySelector('.r'+r).classList.add('on');
+  var p=document.getElementById('batp');
+  if(r==='H'||r==='O')p.classList.add('open');else p.classList.remove('open');
+}
+function selDir(dir){
+  SEL.dir=dir;
+  var c=FCOORDS[dir];if(!c)return;
+  var mk=document.getElementById('fmk');if(mk){mk.setAttribute('cx',c[0]);mk.setAttribute('cy',c[1]);}
+  var lbl=document.getElementById('fdlbl');if(lbl)lbl.textContent=dir;
+}
+function selBType(t,btn){SEL.btype=t;document.querySelectorAll('.bttb').forEach(function(b){b.classList.remove('on');});btn.classList.add('on');}
+
+// ===== RECORD =====
+function recordPitch(){
+  if(!SEL.setup){toast('① 捕手の構えを選択してください');return;}
+  if(!SEL.type){toast('② 球種を選択してください');return;}
+  if(!SEL.pitch){toast('③ 実際のコースを選択してください');return;}
+  if(!SEL.result){toast('④ 結果を選択してください');return;}
+  var ab=ST.abs[ST.cur];if(!ab)return;
+  var matched=SEL.setup.r===SEL.pitch.r&&SEL.setup.c===SEL.pitch.c;
+  var p={num:ab.pitches.length+1,count:ST.balls+'-'+ST.strikes,type:SEL.type,setup:SEL.setup,pitch:SEL.pitch,result:SEL.result,matched:matched,dir:SEL.dir||null,btype:SEL.btype||null,ts:Date.now()};
+  ab.pitches.push(p);
+  var r=SEL.result;
+  if(r==='B'){if(ST.balls<3)ST.balls++;else{ST.balls=0;ST.strikes=0;}}
+  else if(r==='S'){if(ST.strikes<2)ST.strikes++;else{ST.balls=0;ST.strikes=0;}}
+  else if(r==='F'){if(ST.strikes<2)ST.strikes++;}
+  else if(r==='H'||r==='O'||r==='W'){ab.finalResult=r;ST.balls=0;ST.strikes=0;}
+  updateDots();renderLog();renderABList();updateStats();saveData();
+  SEL={setup:null,type:null,pitch:null,result:null,dir:null,btype:null};
+  document.querySelectorAll('.zc').forEach(function(x){x.classList.remove('ss','sp');});
+  document.querySelectorAll('.ptb').forEach(function(b){b.classList.remove('on');});
+  document.querySelectorAll('.rb').forEach(function(b){b.classList.remove('on');});
+  document.querySelectorAll('.bttb').forEach(function(b){b.classList.remove('on');});
+  var mk=document.getElementById('fmk');if(mk){mk.setAttribute('cx','-99');mk.setAttribute('cy','-99');}
+  var fdlbl=document.getElementById('fdlbl');if(fdlbl)fdlbl.textContent='';
+  document.getElementById('batp').classList.remove('open');
+  toast((matched?'✅ 構え通り':'⚠️ ズレ')+' '+SEL.type||p.type+' → '+RL[r]);
+}
+function renderLog(){
+  var ab=ST.abs[ST.cur];var tb=document.getElementById('pitchLog');
+  if(!ab){tb.innerHTML='';return;}
+  tb.innerHTML=ab.pitches.map(function(p,i){
+    return '<tr><td style="color:var(--muted);font-weight:700">'+p.num+'</td><td style="color:var(--muted)">'+p.count+'</td><td>'+p.type+'</td><td style="font-size:9px;color:var(--purple)">'+(p.setup?p.setup.label:'-')+'</td><td style="font-size:9px;color:var(--orange)">'+(p.pitch?p.pitch.label:'-')+'</td><td class="'+(p.matched?'mok':'mng')+'">'+(p.matched?'✔':'✘')+'</td><td><span class="bdg b'+p.result+'">'+RL[p.result]+'</span></td><td><button class="delbtn" onclick="delPitch('+i+')">✕</button></td></tr>';
+  }).join('');
+}
+function delPitch(idx){var ab=ST.abs[ST.cur];if(!ab)return;ab.pitches.splice(idx,1);ab.pitches.forEach(function(p,i){p.num=i+1;});recalcCount();renderLog();renderABList();updateStats();saveData();}
+
+// ===== COUNT DOTS =====
+function updateDots(){
+  function mk(id,tot,fill,cls){var el=document.getElementById(id);if(!el)return;el.innerHTML=Array(tot).fill(0).map(function(_,i){return '<div class="cdot'+(i<fill?' on'+cls:'')+'"></div>';}).join('');}
+  mk('bDots',4,ST.balls,'B');mk('sDots',3,ST.strikes,'S');mk('oDots',3,ST.outs,'O');
+}
+
+// ===== STATS =====
+function allP(){return ST.abs.reduce(function(a,ab){return a.concat(ab.pitches);},[]);}
+function updateStats(){
+  var ps=allP();var tot=ps.length;
+  var stk=ps.filter(function(p){return ['S','F','H','O'].indexOf(p.result)>=0;}).length;
+  var hits=ps.filter(function(p){return p.result==='H';}).length;
+  var outs=ps.filter(function(p){return p.result==='O';}).length;
+  var walks=ps.filter(function(p){return p.result==='W';}).length;
+  var withB=ps.filter(function(p){return p.setup&&p.pitch;});
+  var mc=withB.filter(function(p){return p.matched;}).length;
+  var pct=withB.length?Math.round(mc/withB.length*100):null;
+  var cabs=ST.abs.filter(function(ab){return ab.pitches.length>0;});
+  setText('sTotal',tot);setText('sStR',tot?(stk/tot*100).toFixed(1)+'%':'-');
+  setText('sAvg',cabs.length?(tot/cabs.length).toFixed(1):'-');
+  setText('mPct',pct!==null?pct+'%':'-');setText('mCnt',mc);setText('mMiss',withB.length-mc);
+  setText('sHits',hits);setText('sOuts',outs);setText('sWalks',walks);
+  var mpEl=document.getElementById('mPct');if(mpEl&&pct!==null)mpEl.style.color=pct>=70?'var(--green)':pct>=50?'var(--yellow)':'var(--red)';
+  updatePStat(ps);updateZoneStat(ps,withB);updateSetupStat(ps);updateBatStat(ps);
+}
+function setText(id,v){var el=document.getElementById(id);if(el)el.textContent=v;}
+function updatePStat(ps){
+  var el=document.getElementById('pStat');if(!el)return;
+  var pitchers=[...new Set(ST.abs.map(function(ab){return ab.pitcher;}).filter(function(p){return p;}))];
+  if(!pitchers.length){el.innerHTML='<span style="font-size:11px;color:var(--muted)">投手名を入力してください</span>';return;}
+  var pmap={};ST.abs.forEach(function(ab){if(ab.pitcher)ab.pitches.forEach(function(p){pmap[p.ts]=ab.pitcher;});});
+  el.innerHTML=pitchers.map(function(pit){
+    var pps=ps.filter(function(p){return pmap[p.ts]===pit;});
+    var wb=pps.filter(function(p){return p.setup&&p.pitch;});var mc=wb.filter(function(p){return p.matched;}).length;
+    var pct=wb.length?Math.round(mc/wb.length*100):null;
+    var stk=pps.filter(function(p){return ['S','F','H','O'].indexOf(p.result)>=0;}).length;
+    var spct=pps.length?Math.round(stk/pps.length*100):0;
+    return '<div class="sr"><span style="font-weight:700">⚾ '+pit+'</span><span style="font-size:10px;color:var(--muted)">'+pps.length+'球 ST'+spct+'% 一致'+(pct!==null?pct+'%':'-')+'</span></div>';
+  }).join('');
+}
+function updateZoneStat(ps,withB){
+  function fillHmap(id,countMap,maxV,colR,colG,colB){
+    for(var r=0;r<R;r++)for(var c=0;c<C;c++){
+      var el=document.getElementById(id+'-'+r+'-'+c);if(!el)continue;
+      var cnt=countMap[r+'-'+c]||0;var a=cnt?cnt/maxV*0.8+0.1:0;
+      el.style.background=cnt?'rgba('+colR+','+colG+','+colB+','+a+')':(isSZ(r,c)?'rgba(56,189,248,0.07)':'rgba(255,255,255,0.03)');
+      el.textContent=cnt||'';el.style.color=a>0.5?'#fff':'rgba(255,255,255,0.4)';
+    }
+  }
+  var pc={};ps.forEach(function(p){if(p.pitch){var k=p.pitch.r+'-'+p.pitch.c;pc[k]=(pc[k]||0)+1;}});
+  fillHmap('pitchHmap',pc,Math.max.apply(null,Object.values(pc).concat([1])),251,146,60);
+  var mc={};withB.filter(function(p){return !p.matched;}).forEach(function(p){if(p.pitch){var k=p.pitch.r+'-'+p.pitch.c;mc[k]=(mc[k]||0)+1;}});
+  fillHmap('missHmap',mc,Math.max.apply(null,Object.values(mc).concat([1])),248,113,113);
+  var types={};ps.forEach(function(p){types[p.type]=(types[p.type]||0)+1;});
+  var tsorted=Object.entries(types).sort(function(a,b){return b[1]-a[1];});var tmax=tsorted.length?tsorted[0][1]:1;
+  var tdEl=document.getElementById('typeDist');
+  if(tdEl)tdEl.innerHTML=tsorted.map(function(e,i){return '<div class="br"><span class="bl">'+e[0]+'</span><div class="bb"><div class="bf" style="width:'+(e[1]/tmax*100)+'%;background:'+TCOLS[i%TCOLS.length]+'"></div></div><span class="bc">'+e[1]+'</span></div>';}).join('')||'<span style="font-size:11px;color:var(--muted)">データなし</span>';
+}
+function updateSetupStat(ps){
+  var ws=ps.filter(function(p){return p.setup;});
+  var zc={};ws.forEach(function(p){var k=p.setup.r+'-'+p.setup.c;zc[k]=(zc[k]||0)+1;});
+  var zm=Math.max.apply(null,Object.values(zc).concat([1]));
+  for(var r=0;r<R;r++)for(var c=0;c<C;c++){
+    var k=r+'-'+c;var cnt=zc[k]||0;var a=cnt?cnt/zm*0.8+0.1:0;
+    var el=document.getElementById('setupHmap-'+r+'-'+c);
+    if(el){el.style.background=cnt?'rgba(192,132,252,'+a+')':(isSZ(r,c)?'rgba(56,189,248,0.07)':'rgba(255,255,255,0.03)');el.textContent=cnt||'';el.style.color=a>0.5?'#fff':'rgba(255,255,255,0.3)';}
+    var sel=document.getElementById('ssel-'+r+'-'+c);
+    if(sel){sel.style.background=cnt?'rgba(192,132,252,'+a+')':(isSZ(r,c)?'rgba(56,189,248,0.07)':'rgba(255,255,255,0.03)');sel.textContent=cnt||'';sel.style.color=a>0.5?'#fff':'rgba(255,255,255,0.3)';}
+  }
+  if(selSetupZone)showSetupZone(selSetupZone.r,selSetupZone.c);
+}
+function showSetupZone(r,c){
+  selSetupZone={r:r,c:c};
+  var ws=allP().filter(function(p){return p.setup&&p.setup.r===r&&p.setup.c===c;});
+  document.getElementById('setupZoneName').textContent='📍 '+ZN[r][c]+'（'+(isSZ(r,c)?'SZ':'BZ')+'）'+ws.length+'球';
+  var types={};ws.forEach(function(p){types[p.type]=(types[p.type]||0)+1;});
+  var sorted=Object.entries(types).sort(function(a,b){return b[1]-a[1];});var max=sorted.length?sorted[0][1]:1;
+  var el=document.getElementById('setupTypeDist');
+  if(el)el.innerHTML=sorted.map(function(e){var idx=TYPES.indexOf(e[0]);return '<div class="br"><span class="bl">'+e[0]+'</span><div class="bb"><div class="bf" style="width:'+(e[1]/max*100)+'%;background:'+TCOLS[idx>=0?idx:0]+'"></div></div><span class="bc">'+e[1]+'球 '+Math.round(e[1]/ws.length*100)+'%</span></div>';}).join('')||'<span style="font-size:11px;color:var(--muted)">このコースへの構えなし</span>';
+}
+function updateBatStat(ps){
+  var batted=ps.filter(function(p){return p.dir;});
+  var batters=[...new Set(ST.abs.map(function(ab){return ab.batter;}).filter(function(b){return b;}))];
+  var fb=document.getElementById('batFilters');
+  if(fb)fb.innerHTML=['全打者'].concat(batters).map(function(name){return '<button onclick="selBatterF(\''+name+'\')" style="padding:4px 9px;border-radius:5px;border:1px solid '+(name===selBatter?'var(--accent)':'var(--border)')+';background:'+(name===selBatter?'rgba(56,189,248,0.2)':'rgba(255,255,255,0.04)')+';color:'+(name===selBatter?'var(--accent)':'var(--muted)')+';font-size:10px;font-weight:700;cursor:pointer;font-family:inherit;">'+name+'</button>';}).join('');
+  var filtered=selBatter==='全打者'?batted:batted.filter(function(p){var ab=ST.abs.find(function(a){return a.pitches.indexOf(p)>=0;});return ab&&ab.batter===selBatter;});
+  var lbl=document.getElementById('batLabel');if(lbl)lbl.textContent=selBatter+(filtered.length?' '+filtered.length+'打球':'');
+  var dc={};filtered.forEach(function(p){dc[p.dir]=(dc[p.dir]||0)+1;});
+  var dm=Math.max.apply(null,Object.values(dc).concat([1]));
+  DIRS.forEach(function(d){var el=document.getElementById('fs-'+d);if(!el)return;var cnt=dc[d]||0;el.textContent=cnt||'';var a=cnt?0.5+cnt/dm*0.5:0.15;var isIF=['三塁側','投手前','一塁側'].indexOf(d)>=0;el.setAttribute('fill',cnt?(isIF?'rgba(251,191,36,'+a+')':'rgba(74,222,128,'+a+')'):(isIF?'rgba(251,191,36,0.15)':'rgba(74,222,128,0.15)'));el.style.fontSize=cnt?Math.max(10,Math.min(16,10+cnt/dm*6))+'px':'10px';});
+  var dEl=document.getElementById('batDetail');
+  if(dEl)dEl.innerHTML=batters.map(function(name){
+    var bps=ST.abs.filter(function(ab){return ab.batter===name;}).reduce(function(a,ab){return a.concat(ab.pitches);},[]).filter(function(p){return p.dir;});
+    if(!bps.length)return '<div style="padding:5px 0;font-size:11px;color:var(--muted);">'+name+'：打球記録なし</div>';
+    var bdc={};bps.forEach(function(p){bdc[p.dir]=(bdc[p.dir]||0)+1;});
+    var sorted=Object.entries(bdc).sort(function(a,b){return b[1]-a[1];});var bmax=sorted.length?sorted[0][1]:1;
+    var hand=ST.abs.find(function(ab){return ab.batter===name;});hand=hand?hand.hand:'R';
+    var pullD=hand==='R'?['左翼','左中','三塁側']:['右翼','右中','一塁側'];
+    var pullC=bps.filter(function(p){return pullD.indexOf(p.dir)>=0;}).length;
+    var tend=pullC>bps.length-pullC?'🔴 引っ張り':bps.length-pullC>pullC?'🔵 逆方向':'⚪ センター';
+    return '<div style="border:1px solid var(--border);border-radius:8px;padding:9px;margin-bottom:7px;"><div style="display:flex;justify-content:space-between;margin-bottom:7px;"><span style="font-weight:700;font-size:12px;">'+name+'</span><span style="font-size:11px;">'+tend+'</span></div>'+sorted.map(function(e){var isIF=['三塁側','投手前','一塁側'].indexOf(e[0])>=0;return '<div class="br"><span class="bl" style="color:'+(isIF?'var(--yellow)':'var(--green)')+'">'+e[0]+'</span><div class="bb"><div class="bf" style="width:'+(e[1]/bmax*100)+'%;background:'+(isIF?'var(--yellow)':'var(--green)')+'"></div></div><span class="bc">'+e[1]+'</span></div>';}).join('')+'</div>';
+  }).join('')||'<span style="font-size:11px;color:var(--muted)">データなし</span>';
+}
+function selBatterF(name){selBatter=name;updateStats();}
+
+// ===== TABS =====
+function switchTab(activeId){
+  ['tab-sum','tab-pitcher','tab-setup','tab-zone','tab-bat'].forEach(function(id){document.getElementById(id).classList.toggle('on',id===activeId);});
+  ['tp-sum','tp-pitcher','tp-setup','tp-zone','tp-bat'].forEach(function(id){document.getElementById(id).classList.toggle('on',id==='tp-'+activeId.slice(4));});
+}
+
+// ===== SAVE / LOAD =====
+function saveData(){
+  try{
+    var innings=[];for(var i=1;i<=9;i++){var el=document.getElementById('inn'+i);innings.push(el?el.textContent:'-');}
+    var d={abs:ST.abs,cur:ST.cur,balls:ST.balls,strikes:ST.strikes,outs:ST.outs,innings:innings,
+      teamA:document.getElementById('teamA').value||'',teamB:document.getElementById('teamB').value||'',
+      gameDate:document.getElementById('gameDate').value||'',
+      pitcherName:document.getElementById('pitcherName').value||'',
+      pitcherHand:document.getElementById('pitcherHand').value||'R',
+      catcherName:document.getElementById('catcherName').value||'',
+      savedAt:new Date().toLocaleTimeString('ja-JP')};
+    localStorage.setItem(SAVE,JSON.stringify(d));
+    var ind=document.getElementById('saveInd');if(ind){ind.textContent='💾 '+d.savedAt;ind.style.opacity='1';setTimeout(function(){ind.style.opacity='0.5';},2000);}
+  }catch(e){}
+}
+function loadData(){
+  try{
+    var raw=localStorage.getItem(SAVE);if(!raw)return false;
+    var d=JSON.parse(raw);
+    ST.abs=d.abs||[];ST.cur=d.cur||0;ST.balls=d.balls||0;ST.strikes=d.strikes||0;ST.outs=d.outs||0;
+    setTimeout(function(){
+      if(d.teamA)document.getElementById('teamA').value=d.teamA;
+      if(d.teamB)document.getElementById('teamB').value=d.teamB;
+      if(d.gameDate)document.getElementById('gameDate').value=d.gameDate;
+      if(d.pitcherName)document.getElementById('pitcherName').value=d.pitcherName;
+      if(d.pitcherHand)document.getElementById('pitcherHand').value=d.pitcherHand;
+      if(d.catcherName)document.getElementById('catcherName').value=d.catcherName;
+      if(d.innings)d.innings.forEach(function(v,i){var el=document.getElementById('inn'+(i+1));if(el)el.textContent=v;});
+      recalcSB();
+    },50);
+    return true;
+  }catch(e){return false;}
+}
+function doReset(){
+  if(!confirm('全データを削除しますか？'))return;
+  localStorage.removeItem(SAVE);
+  ST.abs=[];ST.cur=0;ST.balls=0;ST.strikes=0;ST.outs=0;
+  for(var i=1;i<=9;i++){var el=document.getElementById('inn'+i);if(el)el.textContent='-';}
+  document.getElementById('innT').textContent='0';
+  addAB();document.getElementById('memberModal').classList.add('show');toast('リセットしました');
+}
+
+// ===== CSV =====
+function exportCSV(){
+  var rows=ST.abs.reduce(function(a,ab){return a.concat(ab.pitches.map(function(p){return {打席番号:ab.num,打者:ab.batter,打席方向:ab.hand==='R'?'右打':'左打',捕手:ab.catcher||'',投手:ab.pitcher||'',投球番号:p.num,カウント:p.count,球種:p.type,構えコース:p.setup?p.setup.label:'',構えSZ:p.setup?p.setup.sz?'SZ':'BZ':'',実際コース:p.pitch?p.pitch.label:'',実際SZ:p.pitch?p.pitch.sz?'SZ':'BZ':'',構え一致:p.matched?'一致':'ズレ',結果:RL[p.result],結果コード:p.result,打球方向:p.dir||'',打球種別:p.btype||''};});},[]);
+  if(!rows.length){toast('記録がありません');return;}
+  var h=Object.keys(rows[0]);
+  var csv='\uFEFF'+[h.join(',')].concat(rows.map(function(r){return h.map(function(k){return '"'+(r[k]||'')+'"';}).join(',');})).join('\n');
+  var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='pitch_'+new Date().toISOString().slice(0,10)+'.csv';a.click();toast('CSVエクスポート完了！');
+}
+
+// ===== REPORT =====
+function openReport(){
+  var ps=allP();if(!ps.length){toast('記録がありません');return;}
+  var tot=ps.length,stk=ps.filter(function(p){return ['S','F','H','O'].indexOf(p.result)>=0;}).length;
+  var withB=ps.filter(function(p){return p.setup&&p.pitch;}),mc=withB.filter(function(p){return p.matched;}).length;
+  var pct=withB.length?Math.round(mc/withB.length*100):null;
+  var batters=[...new Set(ST.abs.map(function(ab){return ab.batter;}).filter(function(b){return b;}))];
+  document.getElementById('rptInner').innerHTML='<div style="font-family:\'Hiragino Sans\',\'Yu Gothic\',sans-serif;color:#1a2035;"><div style="background:linear-gradient(135deg,#0f1b2d,#1a2f4a);color:#fff;padding:24px 28px;"><div style="font-size:22px;font-weight:900;margin-bottom:6px;">⚾ ピッチング分析レポート</div><div style="font-size:12px;opacity:0.7;">総投球数：'+tot+'球 / ストライク率：'+(tot?(stk/tot*100).toFixed(1)+'%':'-')+' / 構え一致率：'+(pct!==null?pct+'%':'-')+'</div></div><div style="padding:20px 28px;"><h2 style="font-size:15px;font-weight:900;border-left:4px solid #38bdf8;padding-left:8px;margin-bottom:12px;">投球サマリー</h2><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;">'+'<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:center;"><div style="font-size:10px;color:#64748b;margin-bottom:4px;">総投球数</div><div style="font-size:24px;font-weight:900;">'+tot+'球</div></div>'+'<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:center;"><div style="font-size:10px;color:#64748b;margin-bottom:4px;">ストライク率</div><div style="font-size:24px;font-weight:900;">'+(tot?(stk/tot*100).toFixed(1)+'%':'-')+'</div></div>'+'<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:center;"><div style="font-size:10px;color:#64748b;margin-bottom:4px;">構え一致率</div><div style="font-size:24px;font-weight:900;">'+(pct!==null?pct+'%':'-')+'</div></div>'+'</div><h2 style="font-size:15px;font-weight:900;border-left:4px solid #38bdf8;padding-left:8px;margin-bottom:12px;">打者別対策</h2>'+batters.map(function(name){var bps=ST.abs.filter(function(ab){return ab.batter===name;}).reduce(function(a,ab){return a.concat(ab.pitches);},[]);var types={};bps.forEach(function(p){if(!types[p.type])types[p.type]={t:0,h:0,o:0};types[p.type].t++;if(p.result==='H')types[p.type].h++;if(p.result==='O')types[p.type].o++;});var sorted=Object.entries(types).sort(function(a,b){return b[1].t-a[1].t;});return '<div style="border:1px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:12px;"><div style="font-size:16px;font-weight:900;margin-bottom:10px;">'+name+'</div><table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:#f1f5f9;"><th style="padding:5px 8px;text-align:left;">球種</th><th>投球</th><th>安打</th><th>アウト</th></tr></thead><tbody>'+sorted.map(function(e){return '<tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:5px 8px;font-weight:700">'+e[0]+'</td><td style="text-align:center">'+e[1].t+'</td><td style="text-align:center;color:'+(e[1].h?'#dc2626':'#64748b')+';font-weight:'+(e[1].h?'700':'400')+'">'+e[1].h+'</td><td style="text-align:center;color:#16a34a">'+e[1].o+'</td></tr>';}).join('')+'</tbody></table></div>';}).join('')+'</div></div>';
+  document.getElementById('rptModal').style.display='block';
+}
+
+// ===== TOAST =====
+function toast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},2500);}
+</script>
+</body>
+</html>
